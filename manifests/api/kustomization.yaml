@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: deepdoc
+resources:
+  - configmap.yaml
+  - deployment.yaml
+  - service.yaml
+# Rewritten by the deepdoc CI `bump` job via `kustomize edit set image`.
+# Nothing else may touch this block, and it must never point at a moving tag:
+# Argo diffs manifest text, so an unchanged tag string deploys nothing.
+images:
+  - name: ghcr.io/roongchakkrin42/deepdoc-api
+    newTag: latest

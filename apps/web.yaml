@@ -1,0 +1,28 @@
+# The Next.js frontend. Its image tag is pinned by the deepdoc_client CI pipeline.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: deepdoc-web
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/RoongChakkrin42/deepdoc-gitops.git
+    targetRevision: main
+    path: manifests/web
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: deepdoc
+  syncPolicy:
+    automated:
+      # Pruning a StatefulSet does not delete the PVCs from its
+      # volumeClaimTemplates, so the data survives.
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

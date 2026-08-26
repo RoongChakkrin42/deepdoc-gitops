@@ -1,0 +1,39 @@
+# NOT in kustomization.yaml, on purpose — Argo neither applies nor prunes it.
+# Run it by hand, once, after the API is Ready:
+#
+#   kubectl apply -f manifests/api/seed-reviewer-job.yaml
+#   kubectl -n deepdoc logs job/seed-reviewer
+#   kubectl -n deepdoc delete job seed-reviewer
+#
+# It is deliberately not a sync hook: registering an existing username throws a
+# conflict, so a job that re-ran on every sync would fail every sync after the
+# first.
+#
+# The image runs SeedModule rather than AppModule. That matters — AppModule
+# would start the submissions module, whose boot hook re-runs every unfinished
+# analysis, so seeding against a live cluster would pay Gemini twice for each
+# and race the running pod's writes.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: seed-reviewer
+  namespace: deepdoc
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: seed
+          image: ghcr.io/roongchakkrin42/deepdoc-api:latest
+          command: ["node", "dist/scripts/seed-reviewer.js"]
+          args:
+            - "--username"
+            - "reviewer"
+            - "--password"
+            - "CHANGE-ME-BEFORE-APPLYING"
+          envFrom:
+            - configMapRef:
+                name: deepdoc-api-config
+            - secretRef:
+                name: deepdoc-api-secrets

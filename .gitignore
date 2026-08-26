@@ -1,0 +1,6 @@
+# Never let a real Secret land here. This repository is public.
+secret.yaml
+secrets.yaml
+*.secret.yaml
+*.env
+.DS_Store

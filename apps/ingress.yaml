@@ -1,0 +1,28 @@
+# Traefik routing and TLS. Wave 2: the Services have to exist first.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: deepdoc-ingress
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/RoongChakkrin42/deepdoc-gitops.git
+    targetRevision: main
+    path: manifests/ingress
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: deepdoc
+  syncPolicy:
+    automated:
+      # Pruning a StatefulSet does not delete the PVCs from its
+      # volumeClaimTemplates, so the data survives.
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

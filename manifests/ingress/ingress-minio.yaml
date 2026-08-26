@@ -1,0 +1,30 @@
+# Its own host, and deliberately no strip-prefix middleware: the object path is
+# part of what SigV4 signs, so rewriting it invalidates every presigned link.
+# S3_PUBLIC_ENDPOINT in the API ConfigMap must match this host exactly.
+#
+# SigV4 does not sign the scheme, so terminating TLS here and forwarding plain
+# HTTP to MinIO is fine.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: minio
+  namespace: deepdoc
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - files.IP-IP-IP-IP.nip.io
+      secretName: minio-tls
+  rules:
+    - host: files.IP-IP-IP-IP.nip.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: minio
+                port:
+                  number: 9000

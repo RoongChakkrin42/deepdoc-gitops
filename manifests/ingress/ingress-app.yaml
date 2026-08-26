@@ -1,0 +1,39 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: deepdoc
+  namespace: deepdoc
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    # The reference format is <namespace>-<name>@kubernetescrd — a hyphen, not
+    # a slash. Get it wrong and Traefik brings the router up WITHOUT the
+    # middleware and says nothing: every /api/* request then arrives at Nest
+    # still carrying the /api prefix and 404s. Verify with
+    #   curl -s https://deepdoc.<host>/api/submissions/form-schema
+    traefik.ingress.kubernetes.io/router.middlewares: deepdoc-strip-api@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - deepdoc.IP-IP-IP-IP.nip.io
+      secretName: deepdoc-tls
+  rules:
+    - host: deepdoc.IP-IP-IP-IP.nip.io
+      http:
+        paths:
+          # Traefik orders routers by rule length, so PathPrefix(/api) wins over
+          # PathPrefix(/) with no priority annotation needed.
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: api
+                port:
+                  number: 8000
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: web
+                port:
+                  number: 3000

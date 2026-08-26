@@ -1,0 +1,28 @@
+# MongoDB and MinIO. Wave 0: the API is useless without them.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: deepdoc-data
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/RoongChakkrin42/deepdoc-gitops.git
+    targetRevision: main
+    path: manifests/data
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: deepdoc
+  syncPolicy:
+    automated:
+      # Pruning a StatefulSet does not delete the PVCs from its
+      # volumeClaimTemplates, so the data survives.
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

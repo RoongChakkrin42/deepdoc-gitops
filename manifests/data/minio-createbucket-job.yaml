@@ -1,0 +1,32 @@
+# Creates the bucket the API writes to. `mc mb --ignore-existing` makes this
+# safe to re-run, which matters because Argo re-applies it whenever the
+# manifest changes.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: minio-createbucket
+  namespace: deepdoc
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  backoffLimit: 10
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: mc
+          image: minio/mc:RELEASE.2025-04-16T18-13-26Z
+          envFrom:
+            - secretRef:
+                name: minio-credentials
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              until mc alias set local http://minio:9000 \
+                "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD"; do
+                echo "waiting for minio..."; sleep 3
+              done
+              mc mb --ignore-existing local/deepdoc
+              echo "bucket ready"

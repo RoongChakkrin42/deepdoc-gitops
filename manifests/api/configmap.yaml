@@ -1,0 +1,35 @@
+# Everything that is not a secret, committed in the clear on purpose: this is
+# the file you most want to read while debugging, and keeping it separate keeps
+# the file you must protect small.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: deepdoc-api-config
+  namespace: deepdoc
+data:
+  NODE_ENV: production
+  PORT: "8000"
+
+  # Same-origin behind the ingress, so no request the browser makes is ever
+  # cross-origin and this is never exercised. Set correctly anyway: leaving it
+  # unset silently falls back to http://localhost:3000.
+  CORS_ORIGINS: https://deepdoc.IP-IP-IP-IP.nip.io
+
+  GEMINI_MODEL: gemini-3.6-flash
+  # Both of these are memory settings before they are anything else — the PDF
+  # is buffered whole, copied, then base64-expanded. Raising either without
+  # raising the container's memory limit ends in an OOMKill.
+  MAX_UPLOAD_MB: "10"
+  GEMINI_MAX_PAYLOAD_MB: "18"
+  # Each attempt is a full multimodal Gemini call. This is a cost dial.
+  ANALYSIS_MAX_ATTEMPTS: "3"
+
+  AWS_REGION: us-east-1
+  S3_BUCKET: deepdoc
+  # What the API itself calls.
+  S3_ENDPOINT: http://minio.deepdoc.svc.cluster.local:9000
+  # What presigned download links are signed for. SigV4 covers the Host header,
+  # so a link signed for the internal address is unusable in a browser and no
+  # proxy can rewrite it.
+  S3_PUBLIC_ENDPOINT: https://files.IP-IP-IP-IP.nip.io
+  S3_FORCE_PATH_STYLE: "true"

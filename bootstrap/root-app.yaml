@@ -1,0 +1,26 @@
+# The only thing applied by hand, and only once:
+#
+#   kubectl apply -f bootstrap/root-app.yaml
+#
+# It points Argo at apps/, which holds the four Applications that point at
+# manifests/. After this, every change to the cluster is a git push.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: deepdoc-root
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/RoongChakkrin42/deepdoc-gitops.git
+    targetRevision: main
+    path: apps
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

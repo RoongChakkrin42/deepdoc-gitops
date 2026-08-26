@@ -1,0 +1,12 @@
+# Turns /api/auth/login on the edge into /auth/login at the API, which is what
+# lets one origin serve both the app and its backend — and is why the browser
+# never makes a cross-origin request.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: strip-api
+  namespace: deepdoc
+spec:
+  stripPrefix:
+    prefixes:
+      - /api

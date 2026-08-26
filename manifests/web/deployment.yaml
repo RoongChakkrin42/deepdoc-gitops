@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: deepdoc
+  labels:
+    app: web
+spec:
+  # Genuinely stateless, unlike the API: bearer tokens live in the browser's
+  # localStorage, so there is no session affinity to preserve and no shared
+  # cache. Two replicas cost ~160Mi and buy zero-downtime frontend deploys.
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: web
+          image: ghcr.io/roongchakkrin42/deepdoc-web:latest # pinned by CI
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3000
+          env:
+            # The API URL is NOT here: NEXT_PUBLIC_* is compiled into the
+            # browser bundle at build time. The image is built with `/api` and
+            # the ingress serves it from this same origin.
+            - name: PORT
+              value: "3000"
+            - name: HOSTNAME
+              value: 0.0.0.0
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          # `/` is a 307 to /submit — no data access, and probes count 200-399
+          # as success. It must stay an httpGet status check and never a body
+          # match: PersistGate renders nothing until the browser rehydrates, so
+          # server-rendered HTML is an empty shell by design.
+          startupProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 3
+            failureThreshold: 20
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 15
+            failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            capabilities:
+              drop: ["ALL"]

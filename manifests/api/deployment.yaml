@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: deepdoc
+  labels:
+    app: api
+spec:
+  replicas: 1
+  # Recreate, not RollingUpdate, and this is load-bearing.
+  #
+  # A rolling update briefly runs two API pods. On boot each one calls
+  # findStuck() — every submission in `pending` or `processing` — and starts
+  # grading all of them, while the outgoing pod is still grading the same ones.
+  # markProcessing() is an unconditional findByIdAndUpdate, so nothing stops it.
+  # The result is duplicated Gemini calls (real money) and two writers racing on
+  # one document. Recreate guarantees at most one pod exists at any instant; the
+  # cost is a few seconds of 502 per deploy.
+  #
+  # See the API README for the four changes required before this can scale.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      # Long enough for onApplicationShutdown to drain an analysis that is
+      # mid-Gemini. Cut it short and the work is lost and paid for twice.
+      terminationGracePeriodSeconds: 120
+      containers:
+        - name: api
+          image: ghcr.io/roongchakkrin42/deepdoc-api:latest # pinned by CI
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: deepdoc-api-config
+            - secretRef:
+                name: deepdoc-api-secrets
+          resources:
+            requests:
+              cpu: 200m
+              memory: 384Mi
+            limits:
+              cpu: 1500m
+              memory: 1Gi
+          # A cold-Mongo boot plus a findStuck() sweep is slow. Without a
+          # startupProbe the liveness probe kills the pod mid-boot, producing a
+          # loop that looks exactly like a crash.
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 5
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            periodSeconds: 5
+            failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop: ["ALL"]
