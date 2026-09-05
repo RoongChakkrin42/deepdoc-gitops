@@ -11,4 +11,4 @@ resources:
 images:
 - name: ghcr.io/roongchakkrin42/deepdoc-api
   newName: ghcr.io/roongchakkrin42/deepdoc-api
-  newTag: sha-ca5f7df
+  newTag: sha-5fafb98
