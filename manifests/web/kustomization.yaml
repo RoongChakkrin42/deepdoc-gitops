@@ -9,4 +9,4 @@ resources:
 images:
 - name: ghcr.io/roongchakkrin42/deepdoc-web
   newName: ghcr.io/roongchakkrin42/deepdoc-web
-  newTag: sha-07e336f
+  newTag: sha-79c85b0
